@@ -2,7 +2,7 @@ package net.coderbot.iris.block_rendering;
 
 import com.gtnewhorizons.angelica.rendering.celeritas.BlockRenderLayer;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntFunction;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
@@ -24,28 +24,26 @@ public class BlockRenderingSettings {
 	private static final int NBT_CACHE_INTERVAL_TICKS = 20;
 	private static final int TE_NBT_CACHE_MAX = 8192;
 
-	private static final Long2LongLinkedOpenHashMap teNbtIdCache = new Long2LongLinkedOpenHashMap(256);
+	private record TeNbtPosition(int x, int y, int z) {}
+
+	private static final Object2LongLinkedOpenHashMap<TeNbtPosition> teNbtIdCache = new Object2LongLinkedOpenHashMap<>(256);
 	private static final Object teNbtIdCacheLock = new Object();
 
 	static {
 		teNbtIdCache.defaultReturnValue(-1L);
 	}
 
-	public static long packBlockPos(int x, int y, int z) {
-		return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0xFFFL) << 26 | ((long) z & 0x3FFFFFFL);
-	}
-
 	public static void invalidateTeNbtCache(int x, int y, int z) {
-		final long key = packBlockPos(x, y, z);
+		final TeNbtPosition key = new TeNbtPosition(x, y, z);
 		synchronized (teNbtIdCacheLock) {
-			teNbtIdCache.remove(key);
+			teNbtIdCache.removeLong(key);
 		}
 	}
 
-	public static int getCachedTeNbtId(long packedPos, long currentTick) {
+	public static int getCachedTeNbtId(int x, int y, int z, long currentTick) {
 		final long entry;
 		synchronized (teNbtIdCacheLock) {
-			entry = teNbtIdCache.get(packedPos);
+			entry = teNbtIdCache.getLong(new TeNbtPosition(x, y, z));
 		}
 		if (entry == -1L) {
 			return CACHE_MISS;
@@ -57,11 +55,11 @@ public class BlockRenderingSettings {
 		return (int) entry;
 	}
 
-	public static void cacheTeNbtId(long packedPos, int shaderId, long currentTick) {
+	public static void cacheTeNbtId(int x, int y, int z, int shaderId, long currentTick) {
 		// Mask tick into low 31 bits so packed value never collides with the -1L sentinel.
 		final long packed = ((currentTick & 0x7FFFFFFFL) << 32) | (shaderId & 0xFFFFFFFFL);
 		synchronized (teNbtIdCacheLock) {
-			teNbtIdCache.put(packedPos, packed);
+			teNbtIdCache.put(new TeNbtPosition(x, y, z), packed);
 			while (teNbtIdCache.size() > TE_NBT_CACHE_MAX) {
 				teNbtIdCache.removeFirstLong();
 			}

@@ -338,8 +338,7 @@ public abstract class AngelicaChunkBuilderMeshingTask extends ChunkBuilderTask<C
                     ExtendedDataHelper.BLOCK_RENDER_TYPE, lightValue);
                 // Check for TileEntity NBT-conditional shader block ID override
                 if (teMap != null && teMap.hasConditions(block)) {
-                    final long packedPos = BlockRenderingSettings.packBlockPos(x, y, z);
-                    int teBlockId = BlockRenderingSettings.getCachedTeNbtId(packedPos, currentTick);
+                    int teBlockId = BlockRenderingSettings.getCachedTeNbtId(x, y, z, currentTick);
 
                     if (teBlockId == BlockRenderingSettings.CACHE_MISS) {
                         final TileEntity te = getBlockAccess().getTileEntity(x, y, z);
@@ -350,7 +349,7 @@ public abstract class AngelicaChunkBuilderMeshingTask extends ChunkBuilderTask<C
                         } else {
                             teBlockId = -1;
                         }
-                        BlockRenderingSettings.cacheTeNbtId(packedPos, teBlockId, currentTick);
+                        BlockRenderingSettings.cacheTeNbtId(x, y, z, teBlockId, currentTick);
                     }
 
                     if (teBlockId != -1) {
